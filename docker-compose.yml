@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  django:
+    image: django:latest
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    ports:
+      - "6380:6379"
+
+  celery:
+    image: django:latest
+    build: .
+    command: celery -A server worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - django
