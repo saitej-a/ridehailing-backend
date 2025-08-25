@@ -11,14 +11,34 @@ from .utils import create_response, send_mail_worker
 from django.core.cache import cache
 from random import randint
 User=get_user_model()
+
+
 @api_view(['POST'])
 def loginUser(request):
+    """
+    loginUser view:
+        - Expects POST request with 'email' in request data.
+        - Retrieves the user by email and generates a JWT access token for the user.
+        - Returns the access token and user ID in the response.
+        - Returns HTTP 200 OK on success.
+    """
+
     user=User.objects.get(email=request.data.get('email',''))
     token=RefreshToken.for_user(user)
     return Response({'access_token':str(token.access_token),'user':user.id},status=status.HTTP_200_OK)
 
+
+
 @api_view(['POST'])
 def registerUser(request):
+    """
+registerUser view:
+    - Expects POST request with 'email', 'password', 'phone_number', and 'full_name' in request data.
+    - Checks if all fields are provided and if the email or phone number already exists.
+    - Checks if the user is verified (via OTP verification in cache).
+    - If verified, creates a new user and returns user data with HTTP 201 CREATED.
+    - If not verified, returns an error message.
+"""
     email=request.data.get('email')
     password=request.data.get('password')
     phone_number=request.data.get("phone_number")
@@ -41,7 +61,6 @@ def registerUser(request):
     }
     print(is_verfied)
     if is_verfied:
-        
         try:
             data['is_verified']=True
             user=User.objects.create(**data)
@@ -52,8 +71,17 @@ def registerUser(request):
         return create_response(True,{"message":"successfully registered","user":user_data.data},status=status.HTTP_201_CREATED)
     return create_response(False,{"message":"User not verified"},status=status.HTTP_400_BAD_REQUEST)
 
+
+
 @api_view(['POST'])
 def generateOTP(request):
+    """
+generateOTP view:
+    - Expects POST request with 'email' in request data.
+    - Generates a 6-digit OTP and stores it in cache for 1 hour.
+    - Sends the OTP to the user's email asynchronously using a background worker.
+    - Returns success or failure message based on email sending status.
+"""
     email=request.data.get('email')
     otp=randint(100000,999999)
     print(f'otp_{email}',otp)
@@ -64,8 +92,17 @@ def generateOTP(request):
         return create_response(False,{"message":"Failed to send OTP"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return create_response(True,{"message":"Successfully Otp Sent"},status=status.HTTP_200_OK)
 
+
+
 @api_view(['POST'])
 def verifyOTP(request):
+    """
+verifyOTP view:
+    - Expects POST request with 'email' and 'otp' in request data.
+    - Retrieves the cached OTP for the email and compares it with the provided OTP.
+    - If valid, deletes the OTP from cache and sets a verification flag for the user for 1 hour.
+    - Returns success or error message based on verification result.
+"""
     email=request.data.get('email')
     otp=request.data.get('otp')
     cached_otp=cache.get(f'otp_{email}','')

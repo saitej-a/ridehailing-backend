@@ -75,14 +75,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'server.wsgi.application'
 
-CELERY_BROKER_URL='redis://localhost:6380/0'
+CELERY_BROKER_URL= os.environ.get('CELERY_BROKER_URL','redis://redis:6379/0')
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 CACHE={
     'default':{
         'BACKEND':'django_redis.cache.RedisCache',
-        'LOCATION':'redis://localhost:6380/1',
+        'LOCATION':os.environ.get('CACHE_URL','redis://redis:6379/1'),
         'OPTIONS':{
             'CLIENT_CLASS':'django_redis.client.DefaultClient',
             'IGNORE_EXCEPTIONS':True
@@ -92,12 +92,14 @@ CACHE={
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('NAME'),
-        'USER':os.getenv('USER'),
-        'PASSWORD':os.getenv('PASSWORD'),
-        'HOST':os.getenv('HOST'),
-        'PORT':os.getenv('PORT')
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+        
+        # 'NAME': os.getenv('NAME'),
+        # 'USER':os.getenv('USER'),
+        # 'PASSWORD':os.getenv('PASSWORD'),
+        # 'HOST':os.getenv('HOST'),
+        # 'PORT':os.getenv('PORT')
     }
 }
 
