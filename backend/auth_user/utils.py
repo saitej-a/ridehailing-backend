@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from dotenv import load_dotenv
 import os
+import firebase_admin
 
 load_dotenv()
 def create_response(success,data=None,status=status.HTTP_500_INTERNAL_SERVER_ERROR):
@@ -16,20 +17,13 @@ def send_mail_worker(subject,message,reciepient_list):
         send_mail(subject,message,settings.EMAIL_HOST_USER,reciepient_list)
         return create_response(True,status=status.HTTP_200_OK)
     except Exception as e:
-        print(e)
+        # print(e)
         return create_response(False,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-from twilio.rest import Client
 
-@shared_task
-def send_sms_worker(to,body):
+def verifyFirebaseToken(token):
     try:
-        client = Client(os.getenv('TWILIO_ACCOUNT_SID'), os.getenv('TWILIO_ACCOUNT_AUTH_TOKEN'))
-        message = client.messages.create(
-            body=body,
-            from_='+12695207872',
-            to=to
-        )
-        return create_response(True,status=status.HTTP_200_OK)
+        decoded_token = firebase_admin.auth.verify_id_token(token)
+        return {"success": True, "data": {"uid": decoded_token.get("uid"), "phone_number": decoded_token.get("phone_number")}}
     except Exception as e:
-        print(e)
-        return create_response(False,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # print(e)
+        return {"success": False, "message": "Invalid Firebase token"}
