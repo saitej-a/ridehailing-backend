@@ -9,8 +9,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from .utils import create_response, send_mail_worker
 from django.core.cache import cache
+from django.conf import settings
 from random import randint
-from .utils import verifyFirebaseToken
+from .utils import verifyFirebaseToken, generate_password_token
 User=get_user_model()
 
 
@@ -142,3 +143,58 @@ def verifySMSOtp(request):
         return create_response(False, {"message": "User already exists with this phone number"}, status=status.HTTP_400_BAD_REQUEST)
     cache.set(f'verified_{phone_number}', True, 3600)
     return create_response(True, {"message": "Phone number verified successfully", "phone_number": phone_number}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def forgetPassword(request):
+    """
+    forgetPassword view:
+    - Expects POST request with 'email' in request data.
+    - Generates a password reset token and stores it in cache for 1 hour.
+    - Sends the token to the user's email asynchronously using a background worker.
+    - Returns success or failure message based on email sending status.
+    """
+    email = request.data.get('email')
+    if not email:
+        return create_response(False, {"message": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    token = generate_password_token()
+    cache.set(f'reset_token_{email}', token, timeout=3600)
+    try:
+        send_mail_worker.delay("Password Reset", f"Your password reset request has approved change your password by going here: {settings.FRONTEND_URL}/reset-password?token={token}&email={email}", [email])
+        print(cache.get(f'reset_token_{email}'))
+    except Exception as e:
+        return create_response(False, {"message": "Failed to send password reset email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return create_response(True, {"message": "Password reset email sent successfully"}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def changePassword(request):
+    """
+    changePassword view:
+    - Expects POST request with 'email', 'token', and 'new_password' in request data.
+    - Validates the token and updates the user's password if valid.
+    - Returns success or failure message based on password update status.
+    """
+    # print("test for docker")
+    email = request.data.get('email')
+    token = request.data.get('token')
+    new_password = request.data.get('new_password')
+
+    if not email or not token or not new_password:
+        return create_response(False, {"message": "All fields are required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    cached_token = cache.get(f'reset_token_{email}',None)
+    # print(token, cached_token)
+    if not cached_token or cached_token != token:
+        return create_response(False, {"message": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(email=email).first()
+    if not user:
+        return create_response(False, {"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user.set_password(new_password)
+    user.save()
+    cache.delete(f'reset_token_{email}')
+
+    return create_response(True, {"message": "Password changed successfully"}, status=status.HTTP_200_OK)
+

@@ -4,4 +4,6 @@ urlpatterns=[
     path('register/',registerUser),
     path('register/sendemailotp/',generateOTP),
     path('register/verifyemail/',verifyOTP),
+    path('change-password/', changePassword),
+    path('forget-password/', forgetPassword),
 ]

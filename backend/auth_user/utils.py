@@ -6,6 +6,7 @@ from django.conf import settings
 from dotenv import load_dotenv
 import os
 import firebase_admin
+import uuid
 
 load_dotenv()
 def create_response(success,data=None,status=status.HTTP_500_INTERNAL_SERVER_ERROR):
@@ -27,3 +28,6 @@ def verifyFirebaseToken(token):
     except Exception as e:
         # print(e)
         return {"success": False, "message": "Invalid Firebase token"}
+
+def generate_password_token():
+    return str(uuid.uuid4())

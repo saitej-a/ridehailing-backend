@@ -30,7 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
+FRONTEND_URL=os.environ.get('FRONTEND_URL','http://localhost:3000')
 # Application definition
 
 INSTALLED_APPS = [
@@ -80,7 +80,7 @@ CELERY_BROKER_URL= os.environ.get('CELERY_BROKER_URL','redis://redis:6379/0')
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-CACHE={
+CACHES={
     'default':{
         'BACKEND':'django_redis.cache.RedisCache',
         'LOCATION':os.environ.get('CACHE_URL','redis://redis:6379/1'),
