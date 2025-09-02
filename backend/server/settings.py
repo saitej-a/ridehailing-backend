@@ -39,9 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles','rest_framework',
+    'django.contrib.staticfiles','django.contrib.gis' , 'rest_framework',
     'auth_user',
-    'corsheaders'
+    'corsheaders',
+    'driver',
+    'ride'
     
 ]
 
@@ -91,18 +93,27 @@ CACHES={
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('NAME'),
+#         'USER':os.getenv('USER'),
+#         'PASSWORD':os.getenv('PASSWORD'),
+#         'HOST':os.getenv('HOST'),
+#         'PORT':os.getenv('PORT')
+#     }
+# }
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        
-        # 'NAME': os.getenv('NAME'),
-        # 'USER':os.getenv('USER'),
-        # 'PASSWORD':os.getenv('PASSWORD'),
-        # 'HOST':os.getenv('HOST'),
-        # 'PORT':os.getenv('PORT')
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.getenv("POSTGRES_DB", "rides_db"),
+        'USER': os.getenv("POSTGRES_USER", "rides_user"),
+        'PASSWORD': os.getenv("POSTGRES_PASSWORD", "rides_pass"),
+        'HOST': os.getenv("POSTGRES_HOST", "postgres"),  # container name
+        'PORT': os.getenv("POSTGRES_PORT", "5432"),
     }
 }
+
 
 
 # Password validation
