@@ -7,7 +7,7 @@ class DriverProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     # current_location_lat=models.FloatField(null=True,blank=True)
     # current_location_lng=models.FloatField(null=True,blank=True)
-    location=models.PointField(geography=True)
+    location=models.PointField(geography=True,null=True,blank=True)
     is_available = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
 

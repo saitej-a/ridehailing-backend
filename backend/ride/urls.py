@@ -1,3 +1,5 @@
 from django.urls import path
-
-urlpatterns=[]
+from .views import nearbyDrivers
+urlpatterns=[
+    path('nearby-drivers/', nearbyDrivers, name='nearby-drivers'),
+]

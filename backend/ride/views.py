@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import IsAuthenticated
 from auth_user.utils import create_response
 from driver.models import DriverProfile
-
+from rest_framework import status
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def nearbyDrivers(request):
@@ -24,4 +24,4 @@ def nearbyDrivers(request):
         "name": driver.user.full_name,
         "distance_km": driver.distance.km
     } for driver in nearby_drivers]
-    return create_response(drivers_data)
+    return create_response(True,drivers_data,status=status.HTTP_200_OK)
