@@ -61,8 +61,6 @@ def toggleAvailability(request):
 @permission_classes([IsDriver])
 def updateDriverLocation(request):
     user=request.user
-    # if not user.is_driver:
-    #     return create_response(False,{'message':'No driver exists'},status=status.HTTP_404_NOT_FOUND)
     driver=DriverProfile.objects.get(user=user)
     location_data = request.data.get("location")
     if not location_data:

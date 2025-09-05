@@ -38,12 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',
+    'django.contrib.messages','daphne',
     'django.contrib.staticfiles','django.contrib.gis' , 'rest_framework',
+    'channels',
     'auth_user',
     'corsheaders',
     'driver',
-    'ride'
+    'ride',
+    'rider'
     
 ]
 
@@ -77,7 +79,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'server.wsgi.application'
-
+ASGI_APPLICATION = 'server.asgi.application'
 CELERY_BROKER_URL= os.environ.get('CELERY_BROKER_URL','redis://redis:6379/0')
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -114,7 +116,14 @@ DATABASES = {
     }
 }
 
-
+CHANNEL_LAYERS={
+    'default':{
+        'BACKEND':'channels_redis.core.RedisChannelLayer',
+        'CONFIG':{
+            'hosts':[os.environ.get('CHANNEL_LAYERS_REDIS','redis://redis:6379/2')]
+        }
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
