@@ -1,5 +1,5 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
-
+import json
 class DriverConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.driver_id = self.scope['url_route']['kwargs']['driver_id']
@@ -21,6 +21,9 @@ class DriverConsumer(AsyncWebsocketConsumer):
         )
 
     async def notify_ride(self, event):
-        ride_data = event['ride']
+        # print(event)
+        ride_data = event['data']
         # Send message to WebSocket
-        await self.send_json(ride_data)
+        await self.send(text_data=json.dumps({
+            'ride': ride_data
+        }))
