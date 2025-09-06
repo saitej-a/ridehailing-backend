@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view,permission_classes
-from .permissions import IsDriver
+from .permissions import IsDriver, IsAvailableDriver
 from rest_framework.permissions import IsAuthenticated
 from auth_user.utils import create_response
 from rest_framework import status 
@@ -10,11 +10,12 @@ from ride.models import Ride
 from ride.serializers import RideSerializer
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+from django.db import transaction
+
 User=get_user_model()
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-
 def driverRegister(request):
     """
 driverRegister
@@ -41,10 +42,7 @@ Sample Response (Failure):
     "error": "User not found. Try after registering."
 }
 """
-    user_email=request.data.get('user')
-    user=User.objects.filter(email=user_email).first()
-    if not user:
-        return create_response(False, {"error": "User not found. Try after registering."}, status=status.HTTP_404_NOT_FOUND)
+    user=request.user
     if user.is_driver:
         return create_response(False, {"error": "User is already a driver."}, status=status.HTTP_400_BAD_REQUEST)
     driver_profile=DriverProfile.objects.create(user=user)
@@ -213,3 +211,27 @@ Sample Response (Failure):
     rides=Ride.objects.filter(status='requested',type_of_vehicle=vehicle.vehicle_type,pickup_location__distance_lte=(driver.location,D(km=5))).order_by('-created_at')
     data=RideSerializer(rides,many=True)
     return create_response(True,{'rides':data.data},status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsDriver, IsAvailableDriver])
+def acceptRide(request):
+    """"""
+    user=request.user
+    driver_profile=DriverProfile.objects.get(user=user)
+    ride_id=request.data.get('ride_id')
+    if not ride_id:
+        return create_response(False,{"messsage":"Ride details are required"},status=status.HTTP_400_BAD_REQUEST)
+    try:
+        ride=Ride.objects.get(id=ride_id)
+        if ride.driver:
+            raise Exception("Already Driver was assigned")
+        with transaction.atomic():
+            ride.driver=driver_profile
+            ride.status="in_progress"
+            ride.save()
+        return create_response(True,{"message":"Accepted Successfully","updated":f'{timezone.LocalTimezone()}'},status=status.HTTP_202_ACCEPTED)
+    except Ride.DoesNotExist:
+        return create_response(False,{"message":"Not exists"},status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        return create_response(False,{"message":str(e)},status=status.HTTP_404_NOT_FOUND)

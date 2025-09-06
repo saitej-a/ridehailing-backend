@@ -19,12 +19,23 @@ User=get_user_model()
 def loginUser(request):
     """
     loginUser view:
-        - Expects POST request with 'email' in request data.
-        - Retrieves the user by email and generates a JWT access token for the user.
-        - Returns the access token and user ID in the response.
-        - Returns HTTP 200 OK on success.
-    """
+            - Expects POST request with 'email' in request data.
+            - Retrieves the user by email and generates a JWT access token for the user.
+            - Returns the access token and user ID in the response.
+            - Returns HTTP 200 OK on success.
 
+    Sample Request:
+    POST /api/loginUser
+    {
+        "email": "user@example.com"
+    }
+
+    Sample Response:
+    {
+        "access_token": "<jwt_token>",
+        "user": 1
+    }
+    """
     user=User.objects.get(email=request.data.get('email',''))
     token=RefreshToken.for_user(user)
     return Response({'access_token':str(token.access_token),'user':user.id},status=status.HTTP_200_OK)
@@ -35,13 +46,35 @@ def loginUser(request):
 def registerUser(request):
     """
     registerUser view:
-        - Expects POST request with 'email', 'password', 'phone_number', and 'full_name' in request data.
-        - Checks if all fields are provided and if the email or phone number already exists.
-        - Checks if both the email and phone number are verified (via OTP or SMS verification in cache).
-        - If both are verified, creates a new user with 'is_email_verified' and 'is_phone_verified' set to True.
-        - Deletes the verification flags from cache after successful registration.
-        - Returns user data with HTTP 201 CREATED on success.
-        - If not verified, returns an error message indicating which verification is missing.
+            - Expects POST request with 'email', 'password', 'phone_number', and 'full_name' in request data.
+            - Checks if all fields are provided and if the email or phone number already exists.
+            - Checks if both the email and phone number are verified (via OTP or SMS verification in cache).
+            - If both are verified, creates a new user with 'is_email_verified' and 'is_phone_verified' set to True.
+            - Deletes the verification flags from cache after successful registration.
+            - Returns user data with HTTP 201 CREATED on success.
+            - If not verified, returns an error message indicating which verification is missing.
+
+    Sample Request:
+    POST /api/registerUser
+    {
+        "email": "user@example.com",
+        "password": "password123",
+        "phone_number": "1234567890",
+        "full_name": "John Doe"
+    }
+
+    Sample Response (Success):
+    {
+        "success": true,
+        "message": "successfully registered",
+        "user": { ...user data... }
+    }
+
+    Sample Response (Error):
+    {
+        "success": false,
+        "message": "User email not verified"
+    }
     """
     email=request.data.get('email')
     password=request.data.get('password')
@@ -86,12 +119,24 @@ def registerUser(request):
 @api_view(['POST'])
 def generateOTP(request):
     """
-generateOTP view:
-    - Expects POST request with 'email' in request data.
-    - Generates a 6-digit OTP and stores it in cache for 1 hour.
-    - Sends the OTP to the user's email asynchronously using a background worker.
-    - Returns success or failure message based on email sending status.
-"""
+    generateOTP view:
+            - Expects POST request with 'email' in request data.
+            - Generates a 6-digit OTP and stores it in cache for 1 hour.
+            - Sends the OTP to the user's email asynchronously using a background worker.
+            - Returns success or failure message based on email sending status.
+
+    Sample Request:
+    POST /api/generateOTP
+    {
+        "email": "user@example.com"
+    }
+
+    Sample Response:
+    {
+        "success": true,
+        "message": "Successfully Otp Sent"
+    }
+    """
     email=request.data.get('email')
     otp=randint(100000,999999)
     # print(f'otp_{email}',otp)
@@ -107,12 +152,31 @@ generateOTP view:
 @api_view(['POST'])
 def verifyOTP(request):
     """
-verifyOTP view:
-    - Expects POST request with 'email' and 'otp' in request data.
-    - Retrieves the cached OTP for the email and compares it with the provided OTP.
-    - If valid, deletes the OTP from cache and sets a verification flag for the user for 1 hour.
-    - Returns success or error message based on verification result.
-"""
+    verifyOTP view:
+            - Expects POST request with 'email' and 'otp' in request data.
+            - Retrieves the cached OTP for the email and compares it with the provided OTP.
+            - If valid, deletes the OTP from cache and sets a verification flag for the user for 1 hour.
+            - Returns success or error message based on verification result.
+
+    Sample Request:
+    POST /api/verifyOTP
+    {
+        "email": "user@example.com",
+        "otp": "123456"
+    }
+
+    Sample Response (Success):
+    {
+        "success": true,
+        "message": "OTP verified successfully"
+    }
+
+    Sample Response (Error):
+    {
+        "success": false,
+        "message": "Invalid OTP"
+    }
+    """
     email=request.data.get('email')
     otp=request.data.get('otp')
     cached_otp=cache.get(f'otp_{email}','')
@@ -129,7 +193,36 @@ verifyOTP view:
 @api_view(['POST'])
 def verifyPhoneNumber(request):
     """
-    request needs firebase token
+    verifyPhoneNumber view:
+            - Expects POST request with 'token' (firebase token) or 'test' and 'phone_number' in request data.
+            - Verifies phone number using Firebase token or test mode.
+            - Returns success or error message based on verification result.
+
+    Sample Request (Firebase):
+    POST /api/verifyPhoneNumber
+    {
+        "token": "<firebase_token>"
+    }
+
+    Sample Request (Test):
+    POST /api/verifyPhoneNumber
+    {
+        "test": true,
+        "phone_number": "1234567890"
+    }
+
+    Sample Response (Success):
+    {
+        "success": true,
+        "message": "Phone number verified successfully",
+        "phone_number": "+1234567890"
+    }
+
+    Sample Response (Error):
+    {
+        "success": false,
+        "message": "Invalid Firebase token"
+    }
     """
     test=request.data.get('test',False)
     if test:
@@ -155,10 +248,28 @@ def verifyPhoneNumber(request):
 def forgetPassword(request):
     """
     forgetPassword view:
-    - Expects POST request with 'email' in request data.
-    - Generates a password reset token and stores it in cache for 1 hour.
-    - Sends the token to the user's email asynchronously using a background worker.
-    - Returns success or failure message based on email sending status.
+            - Expects POST request with 'email' in request data.
+            - Generates a password reset token and stores it in cache for 1 hour.
+            - Sends the token to the user's email asynchronously using a background worker.
+            - Returns success or failure message based on email sending status.
+
+    Sample Request:
+    POST /api/forgetPassword
+    {
+        "email": "user@example.com"
+    }
+
+    Sample Response (Success):
+    {
+        "success": true,
+        "message": "Password reset email sent successfully"
+    }
+
+    Sample Response (Error):
+    {
+        "success": false,
+        "message": "Email is required"
+    }
     """
     email = request.data.get('email')
     if not email:
@@ -178,9 +289,29 @@ def forgetPassword(request):
 def changePassword(request):
     """
     changePassword view:
-    - Expects POST request with 'email', 'token', and 'new_password' in request data.
-    - Validates the token and updates the user's password if valid.
-    - Returns success or failure message based on password update status.
+            - Expects POST request with 'email', 'token', and 'new_password' in request data.
+            - Validates the token and updates the user's password if valid.
+            - Returns success or failure message based on password update status.
+
+    Sample Request:
+    POST /api/changePassword
+    {
+        "email": "user@example.com",
+        "token": "<reset_token>",
+        "new_password": "newpassword123"
+    }
+
+    Sample Response (Success):
+    {
+        "success": true,
+        "message": "Password changed successfully"
+    }
+
+    Sample Response (Error):
+    {
+        "success": false,
+        "message": "Invalid or expired token"
+    }
     """
     # print("test for docker")
     email = request.data.get('email')
