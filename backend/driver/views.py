@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view,permission_classes
-from .permissions import IsDriver, IsAvailableDriver
+from .permissions import IsDriver, IsAvailableDriver, IsVerifiedDriver
 from rest_framework.permissions import IsAuthenticated
 from auth_user.utils import create_response
 from rest_framework import status 
@@ -11,6 +11,9 @@ from ride.serializers import RideSerializer
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.db import transaction
+from django.utils import timezone
+from rider.utils import estimateFare
+import time
 
 User=get_user_model()
 
@@ -100,7 +103,7 @@ Sample Response (Failure):
     return create_response(False, {"error": "Invalid vehicle data.", "details": vehicle_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-@permission_classes([IsDriver])
+@permission_classes([IsVerifiedDriver])
 
 def toggleAvailability(request):
     """
@@ -141,7 +144,7 @@ Sample Response (Failure):
     return create_response(True,{},status=status.HTTP_200_OK)
 
 @api_view(["POST"])
-@permission_classes([IsDriver])
+@permission_classes([IsVerifiedDriver])
 
 def updateDriverLocation(request):
     """
@@ -213,7 +216,7 @@ Sample Response (Failure):
     return create_response(True,{'rides':data.data},status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsDriver, IsAvailableDriver])
+@permission_classes([IsAvailableDriver,IsVerifiedDriver])
 def acceptRide(request):
     """"""
     user=request.user
@@ -225,9 +228,12 @@ def acceptRide(request):
         ride=Ride.objects.get(id=ride_id)
         if ride.driver:
             raise Exception("Already Driver was assigned")
+        if ride.status != "in_progress":
+            raise Exception("Unable commit changes")
         with transaction.atomic():
             ride.driver=driver_profile
             ride.status="in_progress"
+            ride.start_time=timezone.now()
             ride.save()
         return create_response(True,{"message":"Accepted Successfully","updated":f'{timezone.LocalTimezone()}'},status=status.HTTP_202_ACCEPTED)
     except Ride.DoesNotExist:
@@ -235,3 +241,25 @@ def acceptRide(request):
     
     except Exception as e:
         return create_response(False,{"message":str(e)},status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsVerifiedDriver])
+def completeRide(request):
+    ride_id=request.data.get('ride_id')
+    if not ride_id:
+        return create_response(False,{},status=status.HTTP_400_BAD_REQUEST)
+    try:
+        ride_object=Ride.objects.get(id=ride_id,driver=request.user.driverprofile)
+        if ride_object.status == "completed":
+            raise Exception("Unable to make changes")
+        actual_time=(timezone.now()-ride_object.start_time).total_seconds()/60
+        actual_fare=estimateFare(type_of_vehicle=ride_object.type_of_vehicle,distance=ride_object.distance,estimated_time=actual_time)
+        ride_object.status='completed'
+        ride_object.actual_fare=actual_fare
+        ride_object.save()
+        return create_response(True,{'message':'Ride Completed Successfully','actual_fare':actual_fare,'actual_time':actual_time},status=status.HTTP_200_OK)
+    except Ride.DoesNotExist:
+        return create_response(False,{},status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return create_response(False,{'message':str(e)},status=status.HTTP_404_NOT_FOUND)
+    

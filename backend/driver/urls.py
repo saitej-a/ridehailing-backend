@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import toggleAvailability,updateDriverLocation, driverRegister, rideRequests, vehicleRegistration, acceptRide
+from .views import toggleAvailability,updateDriverLocation, driverRegister, rideRequests, vehicleRegistration, acceptRide, completeRide
 
 
 urlpatterns =[
@@ -8,5 +8,6 @@ urlpatterns =[
     path('register/', driverRegister),
     path('ride-requests/', rideRequests),
     path('vehicle-registration/', vehicleRegistration),
-    path('accept-ride/',acceptRide)
+    path('accept-ride/',acceptRide),
+    path('complete-ride/',completeRide),
 ]

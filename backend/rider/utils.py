@@ -9,6 +9,7 @@ def estimateFare(distance, base_fare=20.0, per_km_rate=2.0, cost_per_minute=1.5,
     """
     Estimate the fare for a ride based on distance.
     """
+    print(type_of_vehicle)
     if distance < 0:
         raise ValueError("Distance cannot be negative")
     if type_of_vehicle == 'bike':
@@ -19,7 +20,7 @@ def estimateFare(distance, base_fare=20.0, per_km_rate=2.0, cost_per_minute=1.5,
         base_fare=40
         per_km_rate=4.0
         cost_per_minute=4.0
-    estimated_fare= (base_fare + ((distance * per_km_rate) + (estimated_time * cost_per_minute)) * surge_multiplier)
+    estimated_fare= (base_fare + ((float(distance) * per_km_rate) + (estimated_time * cost_per_minute)) * surge_multiplier)
     return estimated_fare
 
 def calculateRideDuration(distance, average_speed=40, type_of_vehicle='bike'):
@@ -54,7 +55,7 @@ def calculateDistance(pickup_location, dropoff_location):
 
 def nearbyDrivers_util(user_location_lat, user_location_lng):
     user_point = Point(float(user_location_lng), float(user_location_lat), srid=4326)
-    nearby_drivers = DriverProfile.objects.filter(is_available=True, location__distance_lte=(user_point, D(km=5))).annotate(distance=Distance('location', user_point)).order_by('distance')
+    nearby_drivers = DriverProfile.objects.filter(is_available=True, location__distance_lte=(user_point, D(km=5)),is_verified=True).annotate(distance=Distance('location', user_point)).order_by('distance')
     return nearby_drivers
 
 def calculateRouteDistanceAndTime(pickup_location, dropoff_location) -> tuple:

@@ -61,3 +61,15 @@ def requestRide(request):
     )
     notify_nearby_drivers(ride,nearbyDrivers_util(pickup_location.get("lat"), pickup_location.get("lng")))
     return create_response(True, {"message":"Ride requested successfully","ride":RideSerializer(ride).data}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def cancelRide(request, ride_id):
+    user = request.user
+    try:
+        ride = Ride.objects.get(id=ride_id, rider=user)
+    except Ride.DoesNotExist:
+        return create_response(False, "Ride not found", status=status.HTTP_404_NOT_FOUND)
+    ride.status = 'canceled'
+    ride.save()
+    return create_response(True, "Ride canceled successfully", status=status.HTTP_200_OK)
